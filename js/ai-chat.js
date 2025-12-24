@@ -1,0 +1,178 @@
+const AI_CHAT_JS_VERSION = "12-23-25v05";
+
+// === CONFIGURABLE VARIABLES ===
+const API_ENDPOINT = "https://ai-godswill-bya5efaqehbug6dn.z01.azurefd.net/api/chat";
+const LLM_MODEL = "llama3.1:8b";
+
+let conversationHistory = [];
+let controller = null;
+let systemPrompt = "";
+
+console.log("✅ ai-chat.js loaded");
+console.log(`📦 ai-chat.js version: ${AI_CHAT_JS_VERSION}`);
+console.log(`📦 Using llm: ${LLM_MODEL}`);
+
+// Load the system prompt on page load
+fetch("/ai-prompts/base-prompt.txt")
+  .then(res => res.text())
+  .then(text => {
+    systemPrompt = text.trim();
+    console.log("📜 System prompt loaded");
+  })
+  .catch(err => console.error("❌ Failed to load system prompt:", err));
+
+function showSpinner() {
+  document.getElementById("ai-spinner").style.display = "block";
+}
+
+function hideSpinner() {
+  document.getElementById("ai-spinner").style.display = "none";
+}
+
+// === Append chat bubbles ===
+function appendMessage(role, text) {
+  const container = document.getElementById("ai-messages");
+
+  const div = document.createElement("div");
+  div.className = `msg ${role}`;
+  div.textContent = text;
+
+  container.appendChild(div);
+
+  container.scrollTo({
+    top: container.scrollHeight,
+    behavior: "smooth"
+  });
+
+  return div; // Return bubble so we can update it during streaming
+}
+
+async function sendToOllama(prompt) {
+  controller = new AbortController();
+
+  // Add user bubble immediately
+  appendMessage("user", prompt);
+
+  // Store the user's message in conversation history
+  conversationHistory.push({ role: "user", content: prompt });
+
+  // Optional pruning (keeps last 20 messages)
+  if (conversationHistory.length > 20) {
+    conversationHistory.shift();
+  }
+
+  showSpinner();
+
+  const response = await fetch(API_ENDPOINT, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: LLM_MODEL,
+      messages: [
+        {
+          role: "system",
+          content: systemPrompt
+        },
+        ...conversationHistory,
+      ],
+      stream: true
+    }),
+    signal: controller.signal
+  });
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+
+  let fullText = "";
+  let buffer = "";
+  let hasStartedStreaming = false;
+
+  // Create an empty AI bubble to stream into
+  const aiBubble = appendMessage("ai", "");
+
+  // Smooth update throttle
+  let lastUpdate = 0;
+  const UPDATE_INTERVAL = 25; // ms (25 FPS)
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+
+    if (!hasStartedStreaming) {
+      console.log("💬 AI has started streaming a response...");
+      hasStartedStreaming = true;
+    }
+
+    const chunk = decoder.decode(value);
+    const lines = chunk.trim().split("\n");
+
+    for (const line of lines) {
+      if (!line) continue;
+      const json = JSON.parse(line);
+
+      if (json.message && json.message.content) {
+        buffer += json.message.content; // Add tokens to buffer
+      }
+    }
+
+    // Smooth update: only update bubble every X ms
+    const now = performance.now();
+    if (now - lastUpdate > UPDATE_INTERVAL) {
+      fullText += buffer;
+      buffer = "";
+      aiBubble.textContent = fullText;
+      lastUpdate = now;
+
+      // Keep conversation scrolling
+      const container = document.getElementById("ai-messages");
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior: "smooth"
+      });
+    }
+  }
+
+  // Flush any remaining buffered text
+  if (buffer.length > 0) {
+    fullText += buffer;
+    aiBubble.textContent = fullText;
+  }
+
+  hideSpinner();
+
+  // Store assistant response in memory
+  conversationHistory.push({ role: "assistant", content: fullText });
+
+  // Prune again if needed
+  if (conversationHistory.length > 20) {
+    conversationHistory.shift();
+  }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const btn = document.getElementById("ai-send");
+  const stopBtn = document.getElementById("ai-stop");
+  const input = document.getElementById("ai-input");
+
+  if (btn && input) {
+    btn.addEventListener("click", () => {
+      console.log("✅ Send Button clicked");
+      const prompt = input.value.trim();
+      if (prompt.length > 0) {
+        input.value = "";
+        sendToOllama(prompt);
+      }
+    });
+  }
+
+  if (stopBtn) {
+    stopBtn.addEventListener("click", () => {
+      console.log("🛑 Stop requested");
+      if (controller) {
+        controller.abort();
+        controller = null;
+        hideSpinner();
+      }
+    });
+  }
+});

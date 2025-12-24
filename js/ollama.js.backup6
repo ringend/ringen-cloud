@@ -1,0 +1,129 @@
+const OLLAMA_JS_VERSION = "12-23-25v02";
+
+console.log("✅ ollama.js loaded");
+console.log(`📦 ollama.js version: ${OLLAMA_JS_VERSION}`);
+
+// === CONFIGURABLE VARIABLES ===
+const API_ENDPOINT = "https://ai-godswill-bya5efaqehbug6dn.z01.azurefd.net/api/chat";
+const LLM_MODEL = "llama3.1:8b";
+
+let conversationHistory = [];
+let controller = null;
+let systemPrompt = "";
+
+// Load the system prompt on page load
+fetch("/ai-prompts/base-prompt.txt")
+  .then(res => res.text())
+  .then(text => {
+    systemPrompt = text.trim();
+    console.log("📜 System prompt loaded");
+  })
+  .catch(err => console.error("❌ Failed to load system prompt:", err));
+
+function showSpinner() {
+  document.getElementById("ai-spinner").style.display = "block";
+}
+
+function hideSpinner() {
+  document.getElementById("ai-spinner").style.display = "none";
+}
+
+async function sendToOllama(prompt) {
+  controller = new AbortController();
+
+  // Store the user's message in conversation history
+  conversationHistory.push({ role: "user", content: prompt });
+
+  // Optional pruning (keeps last 20 messages)
+  if (conversationHistory.length > 20) {
+    conversationHistory.shift();
+  }
+
+  showSpinner();
+
+  const response = await fetch(API_ENDPOINT, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: LLM_MODEL,
+      messages: [
+        {
+          role: "system",
+          content: systemPrompt   // Loaded from file
+        },
+
+        // Inject conversation memory here
+        ...conversationHistory,
+      ],
+      stream: true
+    }),
+    signal: controller.signal
+  });
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let fullText = "";
+  let hasStartedStreaming = false;
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+
+    // Log when streaming begins
+    if (!hasStartedStreaming) {
+      console.log("💬 AI has started streaming a response...");
+      hasStartedStreaming = true;
+    }
+
+    const chunk = decoder.decode(value);
+    const lines = chunk.trim().split("\n");
+
+    for (const line of lines) {
+      if (!line) continue;
+      const json = JSON.parse(line);
+
+      if (json.message && json.message.content) {
+        fullText += json.message.content;
+        document.getElementById("ai-output").textContent = fullText;
+      }
+    }
+  }
+
+  hideSpinner();
+
+  // Store assistant response in memory
+  conversationHistory.push({ role: "assistant", content: fullText });
+
+  // Prune again if needed
+  if (conversationHistory.length > 20) {
+    conversationHistory.shift();
+  }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const btn = document.getElementById("ai-send");
+  const stopBtn = document.getElementById("ai-stop");
+  const input = document.getElementById("ai-input");
+
+  if (btn && input) {
+    btn.addEventListener("click", () => {
+      console.log("✅ Send Button clicked");
+      const prompt = input.value.trim();
+      if (prompt.length > 0) {
+        document.getElementById("ai-output").textContent = "";
+        sendToOllama(prompt);
+      }
+    });
+  }
+
+  if (stopBtn) {
+    stopBtn.addEventListener("click", () => {
+      console.log("🛑 Stop requested");
+      if (controller) {
+        controller.abort();
+        controller = null;
+        hideSpinner();
+      }
+    });
+  }
+});
