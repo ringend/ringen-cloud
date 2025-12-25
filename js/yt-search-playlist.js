@@ -1,0 +1,49 @@
+function formatDate(isoDate) {
+  const date = new Date(isoDate);
+  return date.toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  });
+}
+
+async function runSearch() {
+  const q = document.getElementById('query').value.trim();
+  if (!q) {
+    document.getElementById('results').innerHTML = "<p>Please enter a search term.</p>";
+    return;
+  }
+
+  const url = `https://youtube-playlist-functionapp-001-cehwgfhrduehf5a3.centralus-01.azurewebsites.net/api/pl-search-proxy?q=${encodeURIComponent(q)}`;
+  document.getElementById('results').innerHTML = "Loading...";
+
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status} - ${res.statusText}`);
+    const data = await res.json();
+
+    if (!data.value || data.value.length === 0) {
+      document.getElementById('results').innerHTML = "<p>No results found.</p>";
+      return;
+    }
+
+    const countDisplay = `<div class="count">${data['@odata.count']} results found</div>`;
+    const cards = `<div class="results">` + data.value.map(item => `
+      <div class="card">
+        <img src="${item.thumbnail_url || ''}" alt="">
+        <div class="title">${item.title || 'No title'}</div>
+        <div>${item.channel_title || ''}</div>
+        <div class="meta">
+          <span>📅 ${item.published_at ? formatDate(item.published_at) : 'Unknown date'}</span>
+          <span>⏱ ${item.duration_formatted || 'Unknown duration'}</span>
+        </div>
+        <a class="watch-link" href="${item.url}" target="_blank">▶ Watch</a>
+      </div>
+    `).join('') + `</div>`;
+
+    document.getElementById('results').innerHTML = countDisplay + cards;
+
+  } catch (err) {
+    document.getElementById('results').innerHTML = `<p style="color:red;">Error: ${err.message}</p>`;
+  }
+}

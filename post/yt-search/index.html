@@ -75,6 +75,88 @@
           
           <p>Youtube Search</p>
 <p>Search my saved Youtube playlists <a href="https://yt.ringen.cloud/">Youtube Search</a></p>
+<p>
+</p>
+<div>
+  <h1>Youtube Playlist Search for Deron</h1>
+
+  <input type="text" id="query" placeholder="Enter search term">
+  <button onclick="runSearch()">Search</button>
+
+  <div id="results"></div>
+</div>
+
+
+<script src="https://www.ringen.cloud/js/yt-search-playlist.js" defer></script>
+
+<style>
+  input { padding: 8px; width: 300px; }
+  button { padding: 8px 12px; }
+
+  .results {
+    margin-top: 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 15px;
+  }
+
+  .card {
+    border: 1px solid #ccc;
+    padding: 10px;
+    border-radius: 6px;
+    background: #f9f9f9;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .card img {
+    max-width: 100%;
+    border-radius: 4px;
+  }
+
+  .title {
+    font-weight: bold;
+    margin: 5px 0;
+  }
+
+  .meta {
+    font-size: 0.85em;
+    color: #555;
+    margin-top: 4px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .meta span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  a.watch-link {
+    margin-top: auto;
+    text-decoration: none;
+    color: white;
+    background: #cc0000;
+    padding: 6px 10px;
+    border-radius: 4px;
+    text-align: center;
+    font-size: 0.9em;
+  }
+
+  a.watch-link:hover {
+    background: #e60000;
+  }
+
+  .count {
+    font-weight: bold;
+    margin-bottom: 10px;
+  }
+</style>
+
+<p>
+</p>
         </div>
 
         <div class="post_extra mb-2">
