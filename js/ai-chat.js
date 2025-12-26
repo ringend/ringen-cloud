@@ -1,8 +1,9 @@
-const AI_CHAT_JS_VERSION = "12-26-25v01";
+const AI_CHAT_JS_VERSION = "12-26-25v02";
 
 // === CONFIGURABLE VARIABLES ===
 const API_ENDPOINT = "https://ai-fd-ajdgcqhvb4cba7ag.b01.azurefd.net/api/chat";
 const LLM_MODEL = "llama3.1:8b";
+const AI_ERROR = "I am so sorry, I am taking a coffee break right now.   Please come back later.";
 
 let conversationHistory = [];
 let controller = null;
@@ -63,89 +64,112 @@ async function sendToOllama(prompt) {
 
   showSpinner();
 
-  const response = await fetch(API_ENDPOINT, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: LLM_MODEL,
-      messages: [
-        {
-          role: "system",
-          content: systemPrompt
-        },
-        ...conversationHistory,
-      ],
-      stream: true
-    }),
-    signal: controller.signal
-  });
+  let aiBubble = null;
 
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
+  try {
+    const response = await fetch(API_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: LLM_MODEL,
+        messages: [
+          {
+            role: "system",
+            content: systemPrompt
+          },
+          ...conversationHistory,
+        ],
+        stream: true
+      }),
+      signal: controller.signal
+    });
 
-  let fullText = "";
-  let buffer = "";
-  let hasStartedStreaming = false;
-
-  // Create an empty AI bubble to stream into
-  const aiBubble = appendMessage("ai", "");
-
-  // Smooth update throttle
-  let lastUpdate = 0;
-  const UPDATE_INTERVAL = 25; // ms (25 FPS)
-
-  while (true) {
-    const { value, done } = await reader.read();
-    if (done) break;
-
-    if (!hasStartedStreaming) {
-      console.log("💬 AI has started streaming a response...");
-      hasStartedStreaming = true;
+    if (!response.ok) {
+      throw new Error(`Server returned ${response.status}`);
     }
 
-    const chunk = decoder.decode(value);
-    const lines = chunk.trim().split("\n");
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
 
-    for (const line of lines) {
-      if (!line) continue;
-      const json = JSON.parse(line);
+    let fullText = "";
+    let buffer = "";
+    let hasStartedStreaming = false;
 
-      if (json.message && json.message.content) {
-        buffer += json.message.content; // Add tokens to buffer
+    // Create an empty AI bubble to stream into
+    aiBubble = appendMessage("ai", "");
+
+    // Smooth update throttle
+    let lastUpdate = 0;
+    const UPDATE_INTERVAL = 25; // ms (25 FPS)
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+
+      if (!hasStartedStreaming) {
+        console.log("💬 AI has started streaming a response...");
+        hasStartedStreaming = true;
+      }
+
+      const chunk = decoder.decode(value);
+      const lines = chunk.trim().split("\n");
+
+      for (const line of lines) {
+        if (!line) continue;
+        const json = JSON.parse(line);
+
+        if (json.message && json.message.content) {
+          buffer += json.message.content; // Add tokens to buffer
+        }
+      }
+
+      // Smooth update: only update bubble every X ms
+      const now = performance.now();
+      if (now - lastUpdate > UPDATE_INTERVAL) {
+        fullText += buffer;
+        buffer = "";
+        aiBubble.textContent = fullText;
+        lastUpdate = now;
+
+        // Keep conversation scrolling
+        const container = document.getElementById("ai-messages");
+        container.scrollTo({
+          top: container.scrollHeight,
+          behavior: "smooth"
+        });
       }
     }
 
-    // Smooth update: only update bubble every X ms
-    const now = performance.now();
-    if (now - lastUpdate > UPDATE_INTERVAL) {
+    // Flush any remaining buffered text
+    if (buffer.length > 0) {
       fullText += buffer;
-      buffer = "";
       aiBubble.textContent = fullText;
-      lastUpdate = now;
-
-      // Keep conversation scrolling
-      const container = document.getElementById("ai-messages");
-      container.scrollTo({
-        top: container.scrollHeight,
-        behavior: "smooth"
-      });
     }
-  }
 
-  // Flush any remaining buffered text
-  if (buffer.length > 0) {
-    fullText += buffer;
-    aiBubble.textContent = fullText;
-  }
+    hideSpinner();
 
-  hideSpinner();
+    // Store assistant response in memory
+    conversationHistory.push({ role: "assistant", content: fullText });
 
-  // Store assistant response in memory
-  conversationHistory.push({ role: "assistant", content: fullText });
+    // Prune again if needed
+    if (conversationHistory.length > 20) {
+      conversationHistory.shift();
+    }
 
-  // Prune again if needed
-  if (conversationHistory.length > 20) {
-    conversationHistory.shift();
+  } catch (err) {
+    console.error("❌ AI error:", err);
+
+    // If streaming already started, convert the bubble to an error bubble
+    if (aiBubble) {
+      aiBubble.className = "msg error";
+      aiBubble.textContent = AI_ERROR;
+    } else {
+      // If no bubble exists yet, create one
+      appendMessage("error", AI_ERROR);
+    }
+
+  } finally {
+    hideSpinner();
   }
 }
 
