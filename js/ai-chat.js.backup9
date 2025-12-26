@@ -1,7 +1,7 @@
-const AI_CHAT_JS_VERSION = "12-26-25v01";
+const AI_CHAT_JS_VERSION = "12-23-25v05";
 
 // === CONFIGURABLE VARIABLES ===
-const API_ENDPOINT = "https://ai-fd-ajdgcqhvb4cba7ag.b01.azurefd.net/api/chat";
+const API_ENDPOINT = "https://ai-godswill-bya5efaqehbug6dn.z01.azurefd.net/api/chat";
 const LLM_MODEL = "llama3.1:8b";
 
 let conversationHistory = [];
