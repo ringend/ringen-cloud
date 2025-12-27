@@ -1,4 +1,4 @@
-const AI_CHAT_JS_VERSION = "12-27-25v01";
+const AI_CHAT_JS_VERSION = "12-26-25v02";
 
 // === CONFIGURABLE VARIABLES ===
 const API_ENDPOINT = "https://ai-fd-ajdgcqhvb4cba7ag.b01.azurefd.net/api/chat";
@@ -159,16 +159,12 @@ async function sendToOllama(prompt) {
   } catch (err) {
     console.error("❌ AI error:", err);
 
-    // Ignore AbortError from STOP button
-    if (err.name === "AbortError") {
-      console.log("⛔ Stream stopped by user.");
-      return; // Exit silently
-    }
-
+    // If streaming already started, convert the bubble to an error bubble
     if (aiBubble) {
       aiBubble.className = "msg error";
       aiBubble.textContent = AI_ERROR;
     } else {
+      // If no bubble exists yet, create one
       appendMessage("error", AI_ERROR);
     }
 
