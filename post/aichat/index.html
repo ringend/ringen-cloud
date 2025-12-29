@@ -94,7 +94,7 @@
     font-size: 1rem;
   }
 
-  #ai-send, #ai-stop {
+  #ai-send, #ai-stop, #ai-mic {
     padding: 0.5rem 1rem;
     font-size: 1rem;
     width: auto;
@@ -160,11 +160,16 @@
 
   <div style="display: flex; gap: 0.5rem;">
     <button id="ai-send">Send Message</button>
+    <button id="ai-mic">🎤 Hold to Talk</button>
     <button id="ai-stop">Stop Response</button>
   </div>
 
   <div id="ai-spinner">🔄 AI Responding...</div>
 
+</div>
+
+<div id="ai-visualizer" style="height: 8px; width: 100%; background: #ddd; border-radius: 4px; overflow: hidden; display:none;">
+  <div id="ai-visualizer-bar" style="height: 100%; width: 0%; background: #4caf50;"></div>
 </div>
 
 <script src="https://www.ringen.cloud/js/ai-chat.js"></script>

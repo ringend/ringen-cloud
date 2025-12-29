@@ -210,28 +210,6 @@ async function startRecording() {
 
   audioChunks = [];
 
-  const audioContext = new AudioContext();
-  const source = audioContext.createMediaStreamSource(stream);
-  const analyser = audioContext.createAnalyser();
-  analyser.fftSize = 256;
-
-  source.connect(analyser);
-
-  const dataArray = new Uint8Array(analyser.frequencyBinCount);
-  const bar = document.getElementById("ai-visualizer-bar");
-  const vis = document.getElementById("ai-visualizer");
-  vis.style.display = "block";
-
-  function draw() {
-    analyser.getByteFrequencyData(dataArray);
-    const volume = Math.max(...dataArray);
-    const percent = Math.min(100, (volume / 255) * 100);
-    bar.style.width = percent + "%";
-    requestAnimationFrame(draw);
-  }
-
-  draw();
-
   mediaRecorder.ondataavailable = event => {
     audioChunks.push(event.data);
   };
@@ -250,7 +228,6 @@ function stopRecording() {
     mediaRecorder.stop();
     console.log("🛑 Recording stopped");
   }
-  document.getElementById("ai-visualizer").style.display = "none";
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -258,22 +235,21 @@ document.addEventListener("DOMContentLoaded", () => {
   const stopBtn = document.getElementById("ai-stop");
   const input = document.getElementById("ai-input");
   const micBtn = document.getElementById("ai-mic");
+  const micStopBtn = document.getElementById("ai-mic-stop");
 
-  micBtn.addEventListener("mousedown", () => {
-    console.log("🎤 Hold start");
-    startRecording();
-  });
+  if (micBtn) {
+    micBtn.addEventListener("click", () => {
+      console.log("🎤 Mic start clicked");
+      startRecording();
+    });
+  }
 
-  micBtn.addEventListener("mouseup", () => {
-    console.log("🛑 Hold end");
-    stopRecording();
-  });
-
-  micBtn.addEventListener("mouseleave", () => {
-    if (mediaRecorder && mediaRecorder.state === "recording") {
+  if (micStopBtn) {
+    micStopBtn.addEventListener("click", () => {
+      console.log("🛑 Mic stop clicked");
       stopRecording();
-    }
-  });
+    });
+  }  
 
   if (btn && input) {
     btn.addEventListener("click", () => {

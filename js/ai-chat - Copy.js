@@ -258,22 +258,21 @@ document.addEventListener("DOMContentLoaded", () => {
   const stopBtn = document.getElementById("ai-stop");
   const input = document.getElementById("ai-input");
   const micBtn = document.getElementById("ai-mic");
+  const micStopBtn = document.getElementById("ai-mic-stop");
 
-  micBtn.addEventListener("mousedown", () => {
-    console.log("🎤 Hold start");
-    startRecording();
-  });
+  if (micBtn) {
+    micBtn.addEventListener("click", () => {
+      console.log("🎤 Mic start clicked");
+      startRecording();
+    });
+  }
 
-  micBtn.addEventListener("mouseup", () => {
-    console.log("🛑 Hold end");
-    stopRecording();
-  });
-
-  micBtn.addEventListener("mouseleave", () => {
-    if (mediaRecorder && mediaRecorder.state === "recording") {
+  if (micStopBtn) {
+    micStopBtn.addEventListener("click", () => {
+      console.log("🛑 Mic stop clicked");
       stopRecording();
-    }
-  });
+    });
+  }  
 
   if (btn && input) {
     btn.addEventListener("click", () => {
