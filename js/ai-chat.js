@@ -1,5 +1,5 @@
 
-const AI_CHAT_JS_VERSION = "test-1-2-26v09";
+const AI_CHAT_JS_VERSION = "test-1-2-26v010";
 
 const API_ENDPOINT = "https://ai-fd-01-ep2-bcajb8eqfed2epdu.b01.azurefd.net/chat";
 const STT_ENDPOINT = "https://ai-fd-01-ep2-bcajb8eqfed2epdu.b01.azurefd.net/stt";
@@ -129,9 +129,14 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
         } catch (err) {
-            console.error("❌ Chat error:", err);
+            if (err.name === "AbortError") {
+            console.log("🛑 Streaming aborted by user");
+             // Do nothing — leave the assistant bubble as-is
+        } else {
+          console.error("❌ Chat error:", err);
             assistantBubble.textContent = AI_ERROR;
-        }
+    }
+}
 
         spinner.style.display = "none";
     }
