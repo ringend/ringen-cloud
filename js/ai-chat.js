@@ -1,209 +1,207 @@
-const AI_CHAT_JS_VERSION = "12-29-25v01";
 
-// === CONFIGURABLE VARIABLES ===
-const API_ENDPOINT = "https://ai-fd-ajdgcqhvb4cba7ag.b01.azurefd.net/api/chat";
-const LLM_MODEL = "llama3.1:8b";
-const AI_ERROR = "I am so sorry, I am taking a coffee break right now.   Please come back later.";
+const AI_CHAT_JS_VERSION = "test-1-2-26v09";
 
-let conversationHistory = [];
+const API_ENDPOINT = "https://ai-fd-01-ep2-bcajb8eqfed2epdu.b01.azurefd.net/chat";
+const STT_ENDPOINT = "https://ai-fd-01-ep2-bcajb8eqfed2epdu.b01.azurefd.net/stt";
+const AI_ERROR = "I am so sorry, I am taking a coffee break right now. Please come back later.";
+
 let controller = null;
-let systemPrompt = "";
 let mediaRecorder = null;
 let audioChunks = [];
 
 console.log("✅ ai-chat.js loaded");
 console.log(`📦 ai-chat.js version: ${AI_CHAT_JS_VERSION}`);
-console.log(`📦 Using llm: ${LLM_MODEL}`);
 
-// Load the system prompt on page load
-fetch("/ai-prompts/base-prompt.txt")
-  .then(res => res.text())
-  .then(text => {
-    systemPrompt = text.trim();
-    console.log("📜 System prompt loaded");
-  })
-  .catch(err => console.error("❌ Failed to load system prompt:", err));
+// ======================================================
+// SESSION ID GENERATION
+// ======================================================
 
-function showSpinner() {
-  document.getElementById("ai-spinner").style.display = "block";
+function generateSessionId() {
+    const now = new Date();
+    const pad = (n) => n.toString().padStart(2, "0");
+
+    const datePart = [
+        now.getFullYear(),
+        pad(now.getMonth() + 1),
+        pad(now.getDate())
+    ].join("");
+
+    const timePart = [
+        pad(now.getHours()),
+        pad(now.getMinutes()),
+        pad(now.getSeconds())
+    ].join("");
+
+    const randomPart = Math.floor(100000 + Math.random() * 900000);
+
+    return `${datePart}-${timePart}-${randomPart}`;
 }
 
-function hideSpinner() {
-  document.getElementById("ai-spinner").style.display = "none";
+let sessionId = localStorage.getItem("session_id");
+if (!sessionId) {
+    sessionId = generateSessionId();
+    localStorage.setItem("session_id", sessionId);
 }
 
-// === Append chat bubbles ===
-function appendMessage(role, text) {
-  const container = document.getElementById("ai-messages");
+console.log(`🆔 Session ID: ${sessionId}`);
 
-  const div = document.createElement("div");
-  div.className = `msg ${role}`;
-  div.textContent = text;
 
-  container.appendChild(div);
+// ======================================================
+// DOM READY WRAPPER
+// ======================================================
 
-  container.scrollTo({
-    top: container.scrollHeight,
-    behavior: "smooth"
-  });
+document.addEventListener("DOMContentLoaded", () => {
 
-  return div; // Return bubble so we can update it during streaming
-}
+    const messagesDiv = document.getElementById("ai-messages");
+    const inputBox = document.getElementById("ai-input");
+    const sendBtn = document.getElementById("ai-send");
+    const stopBtn = document.getElementById("ai-stop");
+    const micBtn = document.getElementById("ai-mic");
+    const spinner = document.getElementById("ai-spinner");
 
-// Function to send to stt
-async function sendAudioToServer(audioBlob) {
-  const formData = new FormData();
-  formData.append("audio", audioBlob, "speech.webm");
+    // ======================================================
+    // UI HELPERS
+    // ======================================================
 
-  try {
-    const response = await fetch("https://ai-fd-ajdgcqhvb4cba7ag.b01.azurefd.net/stt", {
-      method: "POST",
-      body: formData
-    });
-
-    const data = await response.json();
-
-    if (data.transcript) {
-      console.log("📝 Transcription:", data.transcript);
-      sendToOllama(data.transcript);
-    } else {
-      console.error("❌ No transcription returned");
-    }
-  } catch (err) {
-    console.error("❌ STT error:", err);
-  }
-}
-
-async function sendToOllama(prompt) {
-  controller = new AbortController();
-
-  // Add user bubble immediately
-  appendMessage("user", prompt);
-
-  // Store the user's message in conversation history
-  conversationHistory.push({ role: "user", content: prompt });
-
-  // Optional pruning (keeps last 20 messages)
-  if (conversationHistory.length > 20) {
-    conversationHistory.shift();
-  }
-
-  showSpinner();
-
-  let aiBubble = null;
-
-  try {
-    const response = await fetch(API_ENDPOINT, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: LLM_MODEL,
-        messages: [
-          {
-            role: "system",
-            content: systemPrompt
-          },
-          ...conversationHistory,
-        ],
-        stream: true
-      }),
-      signal: controller.signal
-    });
-
-    if (!response.ok) {
-      throw new Error(`Server returned ${response.status}`);
+    function addUserBubble(text) {
+        const bubble = document.createElement("div");
+        bubble.className = "msg user";
+        bubble.textContent = text;
+        messagesDiv.appendChild(bubble);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
     }
 
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
+    function addAssistantBubble(initialText = "") {
+        const bubble = document.createElement("div");
+        bubble.className = "msg ai";
+        bubble.textContent = initialText;
+        messagesDiv.appendChild(bubble);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        return bubble;
+    }
 
-    let fullText = "";
-    let buffer = "";
-    let hasStartedStreaming = false;
+    function appendAssistantTokens(bubble, text) {
+        bubble.textContent += text;
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
 
-    // Create an empty AI bubble to stream into
-    aiBubble = appendMessage("ai", "");
 
-    // Smooth update throttle
-    let lastUpdate = 0;
-    const UPDATE_INTERVAL = 25; // ms (25 FPS)
+    // ======================================================
+    // SEND MESSAGE (NO CLIENT-SIDE HISTORY)
+    // ======================================================
 
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
+    async function sendMessage(userMessage) {
+        console.log("📤 Message sent:", userMessage);
 
-      if (!hasStartedStreaming) {
-        console.log("💬 AI has started streaming a response...");
-        hasStartedStreaming = true;
-      }
+        addUserBubble(userMessage);
+        spinner.style.display = "inline-block";
 
-      const chunk = decoder.decode(value);
-      const lines = chunk.trim().split("\n");
+        controller = new AbortController();
 
-      for (const line of lines) {
-        if (!line) continue;
-        const json = JSON.parse(line);
+        let assistantBubble = addAssistantBubble("");
 
-        if (json.message && json.message.content) {
-          buffer += json.message.content; // Add tokens to buffer
+        try {
+            const response = await fetch(API_ENDPOINT, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                signal: controller.signal,
+                body: JSON.stringify({
+                    session_id: sessionId,
+                    message: userMessage
+                })
+            });
+
+            if (!response.ok) {
+                assistantBubble.textContent = AI_ERROR;
+                spinner.style.display = "none";
+                return;
+            }
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
+
+                const chunk = decoder.decode(value, { stream: true });
+                appendAssistantTokens(assistantBubble, chunk);
+            }
+
+        } catch (err) {
+            console.error("❌ Chat error:", err);
+            assistantBubble.textContent = AI_ERROR;
         }
-      }
 
-      // Smooth update: only update bubble every X ms
-      const now = performance.now();
-      if (now - lastUpdate > UPDATE_INTERVAL) {
-        fullText += buffer;
-        buffer = "";
-        aiBubble.textContent = fullText;
-        lastUpdate = now;
-
-        // Keep conversation scrolling
-        const container = document.getElementById("ai-messages");
-        container.scrollTo({
-          top: container.scrollHeight,
-          behavior: "smooth"
-        });
-      }
+        spinner.style.display = "none";
     }
 
-    // Flush any remaining buffered text
-    if (buffer.length > 0) {
-      fullText += buffer;
-      aiBubble.textContent = fullText;
+
+    // ======================================================
+    // EVENT LISTENERS (MATCH YOUR HTML)
+    // ======================================================
+
+    sendBtn.addEventListener("click", () => {
+        const text = inputBox.value.trim();
+        if (text.length > 0) {
+            sendMessage(text);
+            inputBox.value = "";
+        }
+    });
+
+    inputBox.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            const text = inputBox.value.trim();
+            if (text.length > 0) {
+                sendMessage(text);
+                inputBox.value = "";
+            }
+        }
+    });
+
+    stopBtn.addEventListener("click", () => {
+        if (controller) {
+            controller.abort();
+            console.log("🛑 Streaming aborted");
+        }
+    });
+
+
+// ======================================================
+// SPEECH-TO-TEXT
+// ======================================================
+
+
+micBtn.addEventListener("mousedown", () => {
+    console.log("🎤 Hold start");
+    startRecording();
+});
+
+micBtn.addEventListener("mouseup", () => {
+    console.log("🛑 Hold end");
+    stopRecording();
+});
+
+micBtn.addEventListener("mouseleave", () => {
+    if (mediaRecorder && mediaRecorder.state === "recording") {
+        stopRecording();
     }
+});
 
-    hideSpinner();
+// Mobile support
+micBtn.addEventListener("touchstart", (e) => {
+    e.preventDefault();
+    console.log("🎤 Touch start");
+    startRecording();
+});
 
-    // Store assistant response in memory
-    conversationHistory.push({ role: "assistant", content: fullText });
+micBtn.addEventListener("touchend", (e) => {
+    e.preventDefault();
+    console.log("🛑 Touch end");
+    stopRecording();
+});
 
-    // Prune again if needed
-    if (conversationHistory.length > 20) {
-      conversationHistory.shift();
-    }
-
-  } catch (err) {
-    console.error("❌ AI error:", err);
-
-    // Ignore AbortError from STOP button
-    if (err.name === "AbortError") {
-      console.log("⛔ Stream stopped by user.");
-      return; // Exit silently
-    }
-
-    if (aiBubble) {
-      aiBubble.className = "msg error";
-      aiBubble.textContent = AI_ERROR;
-    } else {
-      appendMessage("error", AI_ERROR);
-    }
-
-  } finally {
-    hideSpinner();
-  }
-}
-
-// STT 
 async function startRecording() {
   const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
   mediaRecorder = new MediaRecorder(stream);
@@ -238,7 +236,8 @@ async function startRecording() {
 
   mediaRecorder.onstop = () => {
     const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
-    sendAudioToServer(audioBlob);
+    sendAudioToBackendSTT(audioBlob);
+
   };
 
   mediaRecorder.start();
@@ -253,47 +252,31 @@ function stopRecording() {
   document.getElementById("ai-visualizer").style.display = "none";
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-  const btn = document.getElementById("ai-send");
-  const stopBtn = document.getElementById("ai-stop");
-  const input = document.getElementById("ai-input");
-  const micBtn = document.getElementById("ai-mic");
+async function sendAudioToBackendSTT(audioBlob) {
+  console.log("📤 Sending audio to STT backend...");
 
-  micBtn.addEventListener("mousedown", () => {
-    console.log("🎤 Hold start");
-    startRecording();
-  });
+  const formData = new FormData();
+  formData.append("file", audioBlob, "recording.webm");
 
-  micBtn.addEventListener("mouseup", () => {
-    console.log("🛑 Hold end");
-    stopRecording();
-  });
+  try {
+    const response = await fetch(STT_ENDPOINT, {
+      method: "POST",
+      body: formData
+    });
 
-  micBtn.addEventListener("mouseleave", () => {
-    if (mediaRecorder && mediaRecorder.state === "recording") {
-      stopRecording();
+    const result = await response.json();
+    console.log("📥 STT response:", result);
+
+    if (result.text) {
+      sendMessage(result.text);
+    } else {
+      console.warn("⚠️ No transcript returned from STT");
     }
-  });
 
-  if (btn && input) {
-    btn.addEventListener("click", () => {
-      console.log("✅ Send Button clicked");
-      const prompt = input.value.trim();
-      if (prompt.length > 0) {
-        input.value = "";
-        sendToOllama(prompt);
-      }
-    });
+  } catch (err) {
+    console.error("❌ STT request failed:", err);
   }
+}
 
-  if (stopBtn) {
-    stopBtn.addEventListener("click", () => {
-      console.log("🛑 Stop requested");
-      if (controller) {
-        controller.abort();
-        controller = null;
-        hideSpinner();
-      }
-    });
-  }
+
 });
