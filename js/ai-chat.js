@@ -1,5 +1,5 @@
 
-const AI_CHAT_JS_VERSION = "test-1-2-26v010";
+const AI_CHAT_JS_VERSION = "test-1-2-26v011";
 
 const API_ENDPOINT = "https://ai-fd-01-ep2-bcajb8eqfed2epdu.b01.azurefd.net/chat";
 const STT_ENDPOINT = "https://ai-fd-01-ep2-bcajb8eqfed2epdu.b01.azurefd.net/stt";
@@ -58,6 +58,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const stopBtn = document.getElementById("ai-stop");
     const micBtn = document.getElementById("ai-mic");
     const spinner = document.getElementById("ai-spinner");
+    const newBtn = document.getElementById("ai-new");
 
     // ======================================================
     // UI HELPERS
@@ -171,6 +172,18 @@ document.addEventListener("DOMContentLoaded", () => {
             console.log("🛑 Streaming aborted");
         }
     });
+
+    newBtn.addEventListener("click", () => {
+    // Generate a new session ID
+        sessionId = generateSessionId();
+        localStorage.setItem("session_id", sessionId);
+        console.log(`🆕 New conversation started. Session ID: ${sessionId}`);
+
+    // Clear chat UI
+    messagesDiv.innerHTML = "";
+    });
+
+
 
 
 // ======================================================
