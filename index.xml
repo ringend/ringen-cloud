@@ -7,7 +7,7 @@
     <generator>Hugo</generator>
     <language>en</language>
     <copyright>Copyright © 2025, Deron Ringen and the Hugo Authors; all rights reserved.</copyright>
-    <lastBuildDate>Sat, 27 Dec 2025 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Tue, 06 Jan 2026 00:00:00 +0000</lastBuildDate>
     <atom:link href="https://www.ringen.cloud/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>Ringen.Cloud</title>
@@ -29,6 +29,13 @@
       <pubDate>Sat, 27 Dec 2025 00:00:00 +0000</pubDate>
       <guid>https://www.ringen.cloud/post/tools/</guid>
       <description>&lt;p&gt;Internet tools to use.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>Humor</title>
+      <link>https://www.ringen.cloud/post/humor/</link>
+      <pubDate>Tue, 06 Jan 2026 00:00:00 +0000</pubDate>
+      <guid>https://www.ringen.cloud/post/humor/</guid>
+      <description>&lt;p&gt;Things that just make me laugh&amp;hellip;&lt;/p&gt;</description>
     </item>
     <item>
       <title>Youtube Search</title>

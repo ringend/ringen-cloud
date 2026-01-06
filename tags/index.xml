@@ -7,8 +7,15 @@
     <generator>Hugo</generator>
     <language>en</language>
     <copyright>Copyright © 2025, Deron Ringen and the Hugo Authors; all rights reserved.</copyright>
-    <lastBuildDate>Sat, 27 Dec 2025 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Tue, 06 Jan 2026 00:00:00 +0000</lastBuildDate>
     <atom:link href="https://www.ringen.cloud/tags/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Humor</title>
+      <link>https://www.ringen.cloud/tags/humor/</link>
+      <pubDate>Tue, 06 Jan 2026 00:00:00 +0000</pubDate>
+      <guid>https://www.ringen.cloud/tags/humor/</guid>
+      <description></description>
+    </item>
     <item>
       <title>Internet</title>
       <link>https://www.ringen.cloud/tags/internet/</link>
