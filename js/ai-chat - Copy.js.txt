@@ -1,9 +1,12 @@
 
-const AI_CHAT_JS_VERSION = "test-1-2-26v09";
+const AI_CHAT_JS_VERSION = "1-6-26v02";
 
 const API_ENDPOINT = "https://ai-fd-01-ep2-bcajb8eqfed2epdu.b01.azurefd.net/chat";
-const STT_ENDPOINT = "https://ai-fd-01-ep2-bcajb8eqfed2epdu.b01.azurefd.net/stt";
+const STT_ENDPOINT = "https://ai-fd-ajdgcqhvb4cba7ag.b01.azurefd.net/stt";
 const AI_ERROR = "I am so sorry, I am taking a coffee break right now. Please come back later.";
+
+const INITIAL_TIMEOUT_MS = 90000;  // Wait up to XXXms for first token
+const STALL_TIMEOUT_MS = 10000;    // If no token arrives for XXXms, abort.
 
 let controller = null;
 let mediaRecorder = null;
@@ -15,7 +18,6 @@ console.log(`📦 ai-chat.js version: ${AI_CHAT_JS_VERSION}`);
 // ======================================================
 // SESSION ID GENERATION
 // ======================================================
-
 function generateSessionId() {
     const now = new Date();
     const pad = (n) => n.toString().padStart(2, "0");
@@ -49,7 +51,6 @@ console.log(`🆔 Session ID: ${sessionId}`);
 // ======================================================
 // DOM READY WRAPPER
 // ======================================================
-
 document.addEventListener("DOMContentLoaded", () => {
 
     const messagesDiv = document.getElementById("ai-messages");
@@ -58,11 +59,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const stopBtn = document.getElementById("ai-stop");
     const micBtn = document.getElementById("ai-mic");
     const spinner = document.getElementById("ai-spinner");
+    const newBtn = document.getElementById("ai-new");
 
     // ======================================================
     // UI HELPERS
     // ======================================================
-
     function addUserBubble(text) {
         const bubble = document.createElement("div");
         bubble.className = "msg user";
@@ -89,7 +90,6 @@ document.addEventListener("DOMContentLoaded", () => {
     // ======================================================
     // SEND MESSAGE (NO CLIENT-SIDE HISTORY)
     // ======================================================
-
     async function sendMessage(userMessage) {
         console.log("📤 Message sent:", userMessage);
 
@@ -97,8 +97,28 @@ document.addEventListener("DOMContentLoaded", () => {
         spinner.style.display = "inline-block";
 
         controller = new AbortController();
-
         let assistantBubble = addAssistantBubble("");
+
+        let initialTimeout;
+        let stallTimeout;
+        let firstTokenReceived = false;
+
+        function startInitialTimer() {
+            initialTimeout = setTimeout(() => {
+                console.warn("⏳ Initial response timeout");
+                controller.abort();
+            }, INITIAL_TIMEOUT_MS);
+        }
+
+        function resetStallTimer() {
+            clearTimeout(stallTimeout);
+            stallTimeout = setTimeout(() => {
+                console.warn("⏳ Streaming stalled");
+                controller.abort();
+            }, STALL_TIMEOUT_MS);
+        }
+
+        startInitialTimer();
 
         try {
             const response = await fetch(API_ENDPOINT, {
@@ -125,22 +145,37 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (done) break;
 
                 const chunk = decoder.decode(value, { stream: true });
+
+                if (!firstTokenReceived) {
+                    firstTokenReceived = true;
+                    clearTimeout(initialTimeout);
+                    resetStallTimer();
+                } else {
+                    resetStallTimer();
+                }
+
                 appendAssistantTokens(assistantBubble, chunk);
             }
 
         } catch (err) {
+            if (err.name === "AbortError") {
+            console.log("🛑 Streaming aborted by user");
+             // Do nothing — leave the assistant bubble as-is
+            } else {
             console.error("❌ Chat error:", err);
-            assistantBubble.textContent = AI_ERROR;
+                assistantBubble.textContent = AI_ERROR;
+            }
+        } finally {
+            clearTimeout(initialTimeout);
+            clearTimeout(stallTimeout); 
+            spinner.style.display = "none";
         }
-
-        spinner.style.display = "none";
     }
 
 
     // ======================================================
     // EVENT LISTENERS (MATCH YOUR HTML)
     // ======================================================
-
     sendBtn.addEventListener("click", () => {
         const text = inputBox.value.trim();
         if (text.length > 0) {
@@ -167,12 +202,20 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
+    newBtn.addEventListener("click", () => {
+    // Generate a new session ID
+        sessionId = generateSessionId();
+        localStorage.setItem("session_id", sessionId);
+        console.log(`🆕 New conversation started. Session ID: ${sessionId}`);
+
+    // Clear chat UI
+    messagesDiv.innerHTML = "";
+    });
+
 
 // ======================================================
 // SPEECH-TO-TEXT
 // ======================================================
-
-
 micBtn.addEventListener("mousedown", () => {
     console.log("🎤 Hold start");
     startRecording();
@@ -277,6 +320,5 @@ async function sendAudioToBackendSTT(audioBlob) {
     console.error("❌ STT request failed:", err);
   }
 }
-
 
 });

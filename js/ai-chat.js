@@ -1,8 +1,8 @@
 
-const AI_CHAT_JS_VERSION = "1-6-26v02";
+const AI_CHAT_JS_VERSION = "1-23-26v01";
 
 const API_ENDPOINT = "https://ai-fd-01-ep2-bcajb8eqfed2epdu.b01.azurefd.net/chat";
-const STT_ENDPOINT = "https://ai-fd-01-ep2-bcajb8eqfed2epdu.b01.azurefd.net/stt";
+const STT_ENDPOINT = "https://ai-fd-ajdgcqhvb4cba7ag.b01.azurefd.net/stt";
 const AI_ERROR = "I am so sorry, I am taking a coffee break right now. Please come back later.";
 
 const INITIAL_TIMEOUT_MS = 90000;  // Wait up to XXXms for first token
@@ -299,7 +299,7 @@ async function sendAudioToBackendSTT(audioBlob) {
   console.log("📤 Sending audio to STT backend...");
 
   const formData = new FormData();
-  formData.append("file", audioBlob, "recording.webm");
+  formData.append("audio", audioBlob, "recording.webm");
 
   try {
     const response = await fetch(STT_ENDPOINT, {
@@ -310,10 +310,11 @@ async function sendAudioToBackendSTT(audioBlob) {
     const result = await response.json();
     console.log("📥 STT response:", result);
 
-    if (result.text) {
-      sendMessage(result.text);
+    // The STT service returns the transcription in `result.transcript`
+    if (result.transcript && result.transcript.trim().length > 0) {
+        sendMessage(result.transcript);
     } else {
-      console.warn("⚠️ No transcript returned from STT");
+        console.warn("⚠️ No transcript returned from STT");
     }
 
   } catch (err) {
