@@ -1,7 +1,6 @@
-const APP_VERSION = "1.4";
+const APP_VERSION = "1.1";
 console.log(`📦 MyApp version: ${APP_VERSION}`);
 
-// Function to format date
 function formatDate(isoDate) {
   const date = new Date(isoDate);
   return date.toLocaleDateString(undefined, {
@@ -11,7 +10,6 @@ function formatDate(isoDate) {
   });
 }
 
-// Function to run search
 async function runSearch() {
   const q = document.getElementById('query').value.trim();
   if (!q) {
@@ -58,12 +56,3 @@ async function runSearch() {
     document.getElementById('results').innerHTML = `<p style="color:red;">Error: ${err.message}</p>`;
   }
 }
-
-// Add event listener for Enter key press
-document.getElementById('query').addEventListener('keypress', function(e) {
-  if (e.key === 'Enter') {
-    runSearch();
-  }
-});
-
-
