@@ -1,4 +1,4 @@
-const APP_VERSION = "1.6";
+const APP_VERSION = "1.4";
 console.log(`📦 MyApp version: ${APP_VERSION}`);
 
 // Function to format date
@@ -11,33 +11,14 @@ function formatDate(isoDate) {
   });
 }
 
-// Convert user query so all terms are required (AND behavior).
-// Quoted phrases are preserved. Unquoted words each get a "+" prefix.
-// Example: guitar "blues lesson" → +guitar +"blues lesson"
-function buildAndQuery(raw) {
-    const tokens = [];
-    const regex = /"[^"]*"|\S+/g;
-    let match;
-    while ((match = regex.exec(raw)) !== null) {
-        let token = match[0];
-        // Don't double-prefix if user already typed + or -
-        if (!token.startsWith('+') && !token.startsWith('-')) {
-            token = '+' + token;
-        }
-        tokens.push(token);
-    }
-    return tokens.join(' ');
-}
-
 // Function to run search
 async function runSearch() {
-  const raw = document.getElementById('query').value.trim();
-  if (!raw) {
+  const q = document.getElementById('query').value.trim();
+  if (!q) {
     document.getElementById('results').innerHTML = "<p>Please enter a search term.</p>";
     return;
   }
 
-  const q = buildAndQuery(raw);
   const url = `https://youtube-playlist-functionapp-001-cehwgfhrduehf5a3.centralus-01.azurewebsites.net/api/pl-search-proxy?q=${encodeURIComponent(q)}`;
   document.getElementById('results').innerHTML = "Loading...";
 
