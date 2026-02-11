@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" >
   <head>
-  <title>Youtube search | Ringen Cloud Webpage</title>
+  <title>Youtube search test | Ringen Cloud Webpage</title>
   <meta charset='utf-8'>
   <meta name="viewport" content ="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -12,8 +12,8 @@
 <meta name="keywords" content="Ringen Cloud Webpage">
 <meta property="og:locale" content='en_US'>
 <meta property="og:type" content="article">
-<meta property="og:title" content="Youtube Search">
-<meta property="og:description" content="Youtube Search">
+<meta property="og:title" content="Youtube Search -Test">
+<meta property="og:description" content="Youtube Search -Test">
 <meta property="og:url" content="https://www.ringen.cloud/post/yt-test/">
 <meta property="og:image" content="https://www.ringen.cloud/images/yt.png">
 <link rel="canonical" href="https://www.ringen.cloud/post/yt-test/">
@@ -64,7 +64,7 @@
       
 
       
-      <h1 class="post_title" data-pagefind-meta="title">Youtube Search</h1>
+      <h1 class="post_title" data-pagefind-meta="title">Youtube Search -Test</h1>
 
       <div class="post_body">
         
@@ -73,20 +73,25 @@
             
             <img src="https://www.ringen.cloud/images/yt.png" alt="yt.png" class="post_thumbnail">
           
-          <p>Youtube Search</p>
+          <p>Youtube Search -Test</p>
+<p><em>Note that only the top 50 results are returned.</em></p>
 <p>
 </p>
 <div class="yt-search">
-  <h1>Youtube Playlist Search for Deron</h1>
 
-  <input type="text" id="query" placeholder="Enter search term...">
-  <button id="yt-search-btn" onclick="runSearch()">Search</button>
+  <h1>Youtube Playlist Search for Deron</h1>
+  <input type="text" id="query" placeholder="Enter playlist search term...">
+  <button id="yt-search-btn" onclick="runSearch()">Search Playlists</button>
+ 
+  <h1>Youtube Channel Search for Deron</h1>
+  <input type="text" id="channelQuery" placeholder="Enter channel search term...">
+  <button id="channel-search-btn" onclick="runChannelSearch()">Search Channels</button>
 
   <div id="results"></div>
 </div>
 
 
-<script src="https://www.ringen.cloud/js/yt-test-search-playlist.js" defer></script>
+<script src="https://www.ringen.cloud/js/yt-test-search-combined.js" defer></script>
 
 <style>
   .yt-search {
@@ -108,6 +113,26 @@
   }
 
   #yt-search-btn {
+    padding: 0.5rem 1rem;
+    font-size: 1rem;
+    width: auto;
+    align-self: flex-start;
+    cursor: pointer;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  }
+
+  #channelQuery {
+    width: 100%;
+    padding: 0.75rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-style: italic;
+    font-size: 1rem;
+  }
+
+  #channel-search-btn {
     padding: 0.5rem 1rem;
     font-size: 1rem;
     width: auto;
@@ -178,6 +203,8 @@
     margin-bottom: 10px;
   }
 </style>
+
+
 
 <p>
 </p>
