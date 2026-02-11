@@ -40,7 +40,7 @@ async function runSearch() {
 
     // Define your Azure AI Search endpoint
     const endpoint = 'https://youtube-search.search.windows.net/indexes/youtube-combined-search/docs/search?api-version=2021-04-30-Preview';
-    const queryID = 'nkFW7TTMiWpgBAda2J5PoTxOuzj5C6IN2g0vl7na3xAzSeDJJ4rc';
+    const querykey = 'nkFW7TTMiWpgBAda2J5PoTxOuzj5C6IN2g0vl7na3xAzSeDJJ4rc';
 
     document.getElementById('results').innerHTML = "Loading...";
 
@@ -50,7 +50,7 @@ async function runSearch() {
             mode: 'cors',
             headers: {
                 'Content-Type': 'application/json',
-                'api-key': queryID 
+                'api-key': querykey
             },
             body: JSON.stringify({ search: q }) 
         });
