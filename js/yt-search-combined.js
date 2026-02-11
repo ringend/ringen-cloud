@@ -1,4 +1,4 @@
-const APP_VERSION = "26-02-11-01";
+const APP_VERSION = "26-02-11-02";
 console.log(`📦 MyApp version: ${APP_VERSION}`);
 
 // Function to format date
@@ -11,7 +11,6 @@ function formatDate(isoDate) {
   });
 }
 
-// Convert user query so all terms are required (AND behavior).
 // Quoted phrases are preserved. Unquoted words each get a "+" prefix.
 // Example: guitar "blues lesson" → +guitar +"blues lesson"
 function buildAndQuery(raw) {
@@ -39,9 +38,9 @@ async function runSearch() {
 
     const q = buildAndQuery(raw);
 
-    // Define your Azure AI Search endpoint and API key
+    // Define your Azure AI Search endpoint
     const endpoint = 'https://youtube-search.search.windows.net/indexes/youtube-combined-search/docs/search?api-version=2021-04-30-Preview';
-    const apiKey = 'nkFW7TTMiWpgBAda2J5PoTxOuzj5C6IN2g0vl7na3xAzSeDJJ4rc';
+    const queryID = 'nkFW7TTMiWpgBAda2J5PoTxOuzj5C6IN2g0vl7na3xAzSeDJJ4rc';
 
     document.getElementById('results').innerHTML = "Loading...";
 
@@ -51,9 +50,9 @@ async function runSearch() {
             mode: 'cors',
             headers: {
                 'Content-Type': 'application/json',
-                'api-key': apiKey  // API key for authentication
+                'api-key': queryID 
             },
-            body: JSON.stringify({ search: q })  // The search query payload
+            body: JSON.stringify({ search: q }) 
         });
 
         if (!res.ok) throw new Error(`HTTP ${res.status} - ${res.statusText}`);
@@ -91,9 +90,4 @@ document.getElementById('query').addEventListener('keypress', function(e) {
     runSearch();
   }
 });
-
-
-
-
-
 
