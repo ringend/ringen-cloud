@@ -1,4 +1,4 @@
-const APP_VERSION = "26-02-11-06";
+const APP_VERSION = "26-02-13-02";
 console.log(`📦 MyApp version: ${APP_VERSION}`);
 
 // Function to format date
@@ -11,25 +11,8 @@ function formatDate(isoDate) {
   });
 }
 
-// Quoted phrases are preserved. Unquoted words each get a "+" prefix.
-// Example: guitar "blues lesson" → +guitar +"blues lesson"
-function buildAndQuery(raw) {
-    const tokens = [];
-    const regex = /"[^"]*"|\S+/g;
-    let match;
-    while ((match = regex.exec(raw)) !== null) {
-        let token = match[0];
-        // Don't double-prefix if user already typed + or -
-        if (!token.startsWith('+') && !token.startsWith('-')) {
-            token = '+' + token;
-        }
-        tokens.push(token);
-    }
-    return tokens.join(' ');
-}
-
 // Define your Azure AI Search endpoint
-const endpoint = 'https://youtube-search.search.windows.net/indexes/youtube-combined-search/docs/search?api-version=2021-04-30-Preview';
+const endpoint = 'https://youtube-search.search.windows.net/indexes/youtube-combined-search-v2/docs/search?api-version=2021-04-30-Preview';
 const querykey = 'nkFW7TTMiWpgBAda2J5PoTxOuzj5C6IN2g0vl7na3xAzSeDJJ4rc';
 
 // Function to run search
@@ -40,7 +23,6 @@ async function runSearch() {
         return;
     }
 
-    const q = buildAndQuery(raw);
     document.getElementById('results').innerHTML = "Loading...";
 
     try {
@@ -51,7 +33,14 @@ async function runSearch() {
                 'Content-Type': 'application/json',
                 'api-key': querykey
             },
-            body: JSON.stringify({ search: q })
+            body: JSON.stringify({
+                search: raw,
+                searchFields: "channel_title,description",
+                filter: "is_video eq true",
+                queryType: "full",
+                top: 50,
+                count: true
+            })
         });
 
         if (!res.ok) throw new Error(`HTTP ${res.status} - ${res.statusText}`);
@@ -93,7 +82,6 @@ async function runChannelSearch() {
         return;
     }
 
-    const channelSearchQuery = `channel_title:${rawChannelQuery}`;
     document.getElementById('results').innerHTML = "Loading...";
 
     try {
@@ -104,7 +92,14 @@ async function runChannelSearch() {
                 'Content-Type': 'application/json',
                 'api-key': querykey
             },
-            body: JSON.stringify({ search: channelSearchQuery })
+            body: JSON.stringify({
+                search: rawChannelQuery,
+                searchFields: "channel_title,description",
+                filter: "is_channel eq true",
+                queryType: "full",
+                top: 50,
+                count: true
+            })
         });
 
         if (!res.ok) throw new Error(`HTTP ${res.status} - ${res.statusText}`);
